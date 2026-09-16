@@ -1,0 +1,81 @@
+# =============================================================================
+# aliyun-nsg-updater Helm values
+# =============================================================================
+
+# -- CronJob schedule (cron expression)
+schedule: "*/30 * * * *"
+
+# -- Whether to create a one-shot Job on install/upgrade so the rules are
+# synced immediately, without waiting for the first CronJob run.
+job:
+  enabled: true
+  # -- If set, overrides the default config from the CronJob (e.g. a shorter
+  # timeout). Otherwise the CronJob spec is reused.
+  config: {}
+
+# -- Alibaba Cloud credentials and region
+aliyun:
+  accessKeyId: ""
+  accessKeySecret: ""
+  regionId: "cn-hangzhou"
+
+# -- Security group rule templates.  See config.yaml.example for the full
+# documentation of each field.  Every rule **must** have a non-empty
+# description which is used as a tag to identify managed rules.
+rules:
+  # - securityGroupId: "sg-xxxxxxxxx"
+  #   direction: "ingress"
+  #   protocol: "tcp"
+  #   portRange: "22/22"
+  #   priority: "1"
+  #   nicType: "internet"
+  #   policy: "accept"
+  #   description: "SSH access from home"
+
+# -- Container image
+image:
+  repository: "aliyun-nsg-updater"
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# -- Number of past and failed jobs to retain
+successfulJobsHistoryLimit: 3
+failedJobsHistoryLimit: 1
+
+# -- Annotations to add to the CronJob and Pods
+annotations: {}
+
+# -- Labels to add to all resources
+labels: {}
+
+# -- Resource requests / limits for the container
+resources: {}
+  # limits:
+  #   cpu: 200m
+  #   memory: 64Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 32Mi
+
+# -- Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65534   # nobody
+  runAsGroup: 65534
+  fsGroup: 65534
+
+# -- Container security context
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Node selector
+nodeSelector: {}
+
+# -- Tolerations
+tolerations: []
+
+# -- Affinity
+affinity: {}
