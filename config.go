@@ -53,6 +53,9 @@ func (c *Config) Validate() error {
 		if r.Protocol == "" {
 			return fmt.Errorf("rules[%d].protocol is required", i)
 		}
+		if r.Description == "" {
+			return fmt.Errorf("rules[%d].description is required as a tag to identify managed rules", i)
+		}
 	}
 	return nil
 }

@@ -96,9 +96,15 @@ func (a *AliyunClient) describeEgressRules(sgID string) ([]SecurityGroupRule, er
 	return rules, nil
 }
 
-// ruleMatchesTemplate checks if an existing rule matches a rule template
-// on all attributes except the CIDR.
-func ruleMatchesTemplate(rule SecurityGroupRule, tpl RuleTemplate, publicIP string) bool {
+// isOurRule checks if an existing rule belongs to the given template.
+// A rule is considered "ours" only if it matches on protocol, port range,
+// priority, nic type, policy, AND description.
+// The description field serves as a tag to distinguish our rules from
+// manually created ones, preventing accidental deletion.
+func isOurRule(rule SecurityGroupRule, tpl RuleTemplate) bool {
+	if tpl.Description == "" {
+		return false
+	}
 	if rule.IPProtocol != tpl.Protocol {
 		return false
 	}
@@ -112,6 +118,9 @@ func ruleMatchesTemplate(rule SecurityGroupRule, tpl RuleTemplate, publicIP stri
 		return false
 	}
 	if rule.Policy != tpl.Policy {
+		return false
+	}
+	if rule.Description != tpl.Description {
 		return false
 	}
 	return true
@@ -128,8 +137,16 @@ func ruleHasCIDR(rule SecurityGroupRule, tpl RuleTemplate, cidr string) bool {
 // SyncRule ensures that a single rule template is satisfied: the security
 // group has exactly one rule matching the template's parameters with the
 // given public IP as the source/destination CIDR.
+//
+// It only touches rules that match the template's description — this acts
+// as a tag to distinguish managed rules from manually created ones.
 func (a *AliyunClient) SyncRule(tpl RuleTemplate, publicIP string) error {
 	cidr := publicIP + "/32"
+
+	// Description is required as a tag to identify "our" rules.
+	if tpl.Description == "" {
+		return fmt.Errorf("rule description is required to identify managed rules; set a non-empty description in the config")
+	}
 
 	// List existing rules for the appropriate direction.
 	var existingRules []SecurityGroupRule
@@ -143,32 +160,36 @@ func (a *AliyunClient) SyncRule(tpl RuleTemplate, publicIP string) error {
 		return err
 	}
 
-	// Find a matching rule (same protocol/port/etc.) that already has the
-	// desired CIDR — if so, nothing to do.
+	// Collect rules that are "ours" — matching on all fields including description.
+	var ourRules []SecurityGroupRule
 	for _, rule := range existingRules {
-		if ruleMatchesTemplate(rule, tpl, publicIP) && ruleHasCIDR(rule, tpl, cidr) {
-			log.Printf("[SKIP] Rule already up-to-date: %s/%s %s -> %s (sg=%s)",
-				tpl.Protocol, tpl.PortRange, tpl.Direction, cidr, tpl.SecurityGroupID)
+		if isOurRule(rule, tpl) {
+			ourRules = append(ourRules, rule)
+		}
+	}
+
+	// If an existing our-rule already has the desired CIDR, nothing to do.
+	for _, rule := range ourRules {
+		if ruleHasCIDR(rule, tpl, cidr) {
+			log.Printf("[SKIP] Rule already up-to-date: %s/%s %s -> %s (sg=%s, desc=%s)",
+				tpl.Protocol, tpl.PortRange, tpl.Direction, cidr, tpl.SecurityGroupID, tpl.Description)
 			return nil
 		}
 	}
 
-	// Find any old rule(s) matching the template but with a different CIDR
-	// and revoke them.
-	for _, rule := range existingRules {
-		if ruleMatchesTemplate(rule, tpl, publicIP) && !ruleHasCIDR(rule, tpl, cidr) {
-			var oldCIDR string
-			if tpl.Direction == "ingress" {
-				oldCIDR = rule.SourceCidrIP
-			} else {
-				oldCIDR = rule.DestCidrIP
-			}
-			log.Printf("[REVOKE] Removing old rule: %s/%s %s -> %s (sg=%s)",
-				tpl.Protocol, tpl.PortRange, tpl.Direction, oldCIDR, tpl.SecurityGroupID)
+	// Revoke our old rules with different CIDRs.
+	for _, rule := range ourRules {
+		var oldCIDR string
+		if tpl.Direction == "ingress" {
+			oldCIDR = rule.SourceCidrIP
+		} else {
+			oldCIDR = rule.DestCidrIP
+		}
+		log.Printf("[REVOKE] Removing old rule: %s/%s %s -> %s (sg=%s, desc=%s)",
+			tpl.Protocol, tpl.PortRange, tpl.Direction, oldCIDR, tpl.SecurityGroupID, tpl.Description)
 
-			if err := a.revokeRule(tpl, oldCIDR); err != nil {
-				return fmt.Errorf("revoke old rule: %w", err)
-			}
+		if err := a.revokeRule(tpl, oldCIDR); err != nil {
+			return fmt.Errorf("revoke old rule: %w", err)
 		}
 	}
 

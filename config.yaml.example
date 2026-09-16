@@ -15,9 +15,17 @@ aliyun:
 # Each rule template describes one security group permission to keep
 # synchronized with the current public IP. The program will:
 #   1. Detect the current public IP.
-#   2. For each rule, revoke any existing rule that matches the template
-#      but has a different source/destination CIDR.
-#   3. Authorize the rule with the current IP as {ip}/32.
+#   2. For each rule, only touch existing rules that match BOTH the
+#      (protocol, port, priority, nic_type, policy) AND the description.
+#      This prevents accidental modification of manually created rules.
+#   3. If a matching rule already has the current IP → skip.
+#   4. If a matching rule has a different IP → revoke it, then authorize
+#      the new one.
+#   5. If no matching rule exists → authorize a new one.
+#
+# NOTE: description is REQUIRED and used as a tag to identify rules
+# created by this tool. Do not reuse the same description for different
+# rules, and set a unique description per rule template.
 rules:
   # Example: allow SSH (22) from your current public IP
   - security_group_id: "sg-xxxxxxxxxxxxx"
