@@ -11,7 +11,7 @@ metadata:
   {{- end }}
 spec:
   schedule: {{ .Values.schedule | quote }}
-  concurrencyPolicy: Replace
+  concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
   failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit }}
   jobTemplate:
@@ -20,6 +20,9 @@ spec:
         metadata:
           labels:
             {{- include "aliyun-nsg-updater.selectorLabels" . | nindent 12 }}
+          {{- with .Values.annotations }}
+          annotations: {{ toYaml . | nindent 12 }}
+          {{- end }}
         spec:
           restartPolicy: OnFailure
           {{- with .Values.podSecurityContext }}

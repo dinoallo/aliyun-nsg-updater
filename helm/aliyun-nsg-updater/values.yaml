@@ -9,9 +9,6 @@ schedule: "*/30 * * * *"
 # synced immediately, without waiting for the first CronJob run.
 job:
   enabled: true
-  # -- If set, overrides the default config from the CronJob (e.g. a shorter
-  # timeout). Otherwise the CronJob spec is reused.
-  config: {}
 
 # -- Alibaba Cloud credentials and region
 aliyun:
@@ -32,9 +29,9 @@ rules:
   #   policy: "accept"
   #   description: "SSH access from home"
 
-# -- Container image
+# -- Container image.  Published to GitHub Container Registry.
 image:
-  repository: "aliyun-nsg-updater"
+  repository: "ghcr.io/dinoallo/aliyun-nsg-updater"
   tag: "latest"
   pullPolicy: IfNotPresent
 
@@ -42,7 +39,7 @@ image:
 successfulJobsHistoryLimit: 3
 failedJobsHistoryLimit: 1
 
-# -- Annotations to add to the CronJob and Pods
+# -- Annotations to add to the CronJob, Job, Secret, and Pods
 annotations: {}
 
 # -- Labels to add to all resources

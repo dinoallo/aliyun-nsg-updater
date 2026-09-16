@@ -26,10 +26,23 @@ type RuleTemplate struct {
 	Direction       string `yaml:"direction"`   // ingress or egress
 	Protocol        string `yaml:"protocol"`    // tcp, udp, icmp, gre, all
 	PortRange       string `yaml:"port_range"`  // e.g. "22/22", "-1/-1" for icmp
-	Priority        string `yaml:"priority"`    // 1-100
-	NicType         string `yaml:"nic_type"`    // internet or intranet
-	Policy          string `yaml:"policy"`      // accept or drop
+	Priority        string `yaml:"priority"`    // 1-100, default 1
+	NicType         string `yaml:"nic_type"`    // internet or intranet, default internet
+	Policy          string `yaml:"policy"`      // accept or drop, default accept
 	Description     string `yaml:"description"`
+}
+
+// setDefaults applies default values for optional fields.
+func (r *RuleTemplate) setDefaults() {
+	if r.Priority == "" {
+		r.Priority = "1"
+	}
+	if r.NicType == "" {
+		r.NicType = "internet"
+	}
+	if r.Policy == "" {
+		r.Policy = "accept"
+	}
 }
 
 // Validate checks that the configuration is sane.
@@ -43,7 +56,9 @@ func (c *Config) Validate() error {
 	if c.Aliyun.RegionID == "" {
 		return fmt.Errorf("aliyun.region_id is required")
 	}
-	for i, r := range c.Rules {
+	for i := range c.Rules {
+		r := &c.Rules[i]
+		r.setDefaults()
 		if r.SecurityGroupID == "" {
 			return fmt.Errorf("rules[%d].security_group_id is required", i)
 		}

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -42,6 +43,11 @@ func queryPublicIP(client *http.Client, url string) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	// Reject non-2xx responses — a 4xx/5xx body is not an IP address.
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("GET %s returned status %d", url, resp.StatusCode)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("read response from %s: %w", url, err)
@@ -51,5 +57,12 @@ func queryPublicIP(client *http.Client, url string) (string, error) {
 	if ip == "" {
 		return "", fmt.Errorf("empty response from %s", url)
 	}
+
+	// Validate that the response is a valid IPv4 address.
+	parsed := net.ParseIP(ip)
+	if parsed == nil || parsed.To4() == nil {
+		return "", fmt.Errorf("response from %s is not a valid IPv4 address: %q", url, ip)
+	}
+
 	return ip, nil
 }

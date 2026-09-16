@@ -168,29 +168,33 @@ func (a *AliyunClient) SyncRule(tpl RuleTemplate, publicIP string) error {
 		}
 	}
 
-	// If an existing our-rule already has the desired CIDR, nothing to do.
-	for _, rule := range ourRules {
-		if ruleHasCIDR(rule, tpl, cidr) {
-			log.Printf("[SKIP] Rule already up-to-date: %s/%s %s -> %s (sg=%s, desc=%s)",
-				tpl.Protocol, tpl.PortRange, tpl.Direction, cidr, tpl.SecurityGroupID, tpl.Description)
-			return nil
-		}
-	}
+	// Track whether a rule with the desired CIDR already exists.
+	desiredExists := false
 
 	// Revoke our old rules with different CIDRs.
 	for _, rule := range ourRules {
+		if ruleHasCIDR(rule, tpl, cidr) {
+			desiredExists = true
+			continue
+		}
 		var oldCIDR string
 		if tpl.Direction == "ingress" {
 			oldCIDR = rule.SourceCidrIP
 		} else {
 			oldCIDR = rule.DestCidrIP
 		}
-		log.Printf("[REVOKE] Removing old rule: %s/%s %s -> %s (sg=%s, desc=%s)",
-			tpl.Protocol, tpl.PortRange, tpl.Direction, oldCIDR, tpl.SecurityGroupID, tpl.Description)
+		log.Printf("[REVOKE] Removing old rule: %s/%s %s -> %s (sg=%s, desc=%s, ruleID=%s)",
+			tpl.Protocol, tpl.PortRange, tpl.Direction, oldCIDR, tpl.SecurityGroupID, tpl.Description, rule.SecurityGroupRuleID)
 
-		if err := a.revokeRule(tpl, oldCIDR); err != nil {
+		if err := a.revokeRuleByID(rule.SecurityGroupRuleID, tpl.Direction); err != nil {
 			return fmt.Errorf("revoke old rule: %w", err)
 		}
+	}
+
+	if desiredExists {
+		log.Printf("[SKIP] Rule already up-to-date: %s/%s %s -> %s (sg=%s, desc=%s)",
+			tpl.Protocol, tpl.PortRange, tpl.Direction, cidr, tpl.SecurityGroupID, tpl.Description)
+		return nil
 	}
 
 	// Authorize the rule with the current public IP.
@@ -204,30 +208,25 @@ func (a *AliyunClient) SyncRule(tpl RuleTemplate, publicIP string) error {
 	return nil
 }
 
-func (a *AliyunClient) revokeRule(tpl RuleTemplate, cidr string) error {
-	if tpl.Direction == "ingress" {
+// revokeRuleByID revokes a security group rule by its unique rule ID.
+// Using the rule ID is safer than identifying by network tuple, as it
+// prevents accidentally deleting a non-managed rule that happens to
+// share the same protocol/port/CIDR/priority/nicType/policy.
+func (a *AliyunClient) revokeRuleByID(ruleID, direction string) error {
+	if ruleID == "" {
+		return fmt.Errorf("empty rule ID, cannot revoke")
+	}
+	if direction == "ingress" {
 		request := ecs.CreateRevokeSecurityGroupRequest()
 		request.Scheme = "https"
-		request.SecurityGroupId = tpl.SecurityGroupID
-		request.IpProtocol = tpl.Protocol
-		request.PortRange = tpl.PortRange
-		request.SourceCidrIp = cidr
-		request.Priority = tpl.Priority
-		request.NicType = tpl.NicType
-		request.Policy = tpl.Policy
+		request.SecurityGroupRuleId = &[]string{ruleID}
 		_, err := a.ecsClient.RevokeSecurityGroup(request)
 		return err
 	}
 
 	request := ecs.CreateRevokeSecurityGroupEgressRequest()
 	request.Scheme = "https"
-	request.SecurityGroupId = tpl.SecurityGroupID
-	request.IpProtocol = tpl.Protocol
-	request.PortRange = tpl.PortRange
-	request.DestCidrIp = cidr
-	request.Priority = tpl.Priority
-	request.NicType = tpl.NicType
-	request.Policy = tpl.Policy
+	request.SecurityGroupRuleId = &[]string{ruleID}
 	_, err := a.ecsClient.RevokeSecurityGroupEgress(request)
 	return err
 }

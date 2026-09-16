@@ -42,7 +42,7 @@ func main() {
 			i+1, len(cfg.Rules), rule.Protocol, rule.PortRange, rule.Direction, rule.SecurityGroupID)
 
 		if err := client.SyncRule(rule, publicIP); err != nil {
-			log.Printf("[ERROR] Rule %d failed: %v", i, err)
+			log.Printf("[ERROR] Rule %d failed: %v", i+1, err)
 			hadError = true
 		}
 	}
