@@ -1,0 +1,62 @@
+{{- if .Values.rules }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "aliyun-nsg-updater.fullname" . }}
+  labels:
+    {{- include "aliyun-nsg-updater.labels" . | nindent 4 }}
+    {{- with .Values.labels }}{{ toYaml . | nindent 4 }}{{ end }}
+  {{- with .Values.annotations }}
+  annotations: {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "aliyun-nsg-updater.selectorLabels" . | nindent 12 }}
+          {{- with .Values.annotations }}
+          annotations: {{ toYaml . | nindent 12 }}
+          {{- end }}
+        spec:
+          restartPolicy: OnFailure
+          {{- with .Values.podSecurityContext }}
+          securityContext: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          volumes:
+            - name: config
+              secret:
+                secretName: {{ include "aliyun-nsg-updater.fullname" . }}-config
+                defaultMode: 0400
+          containers:
+            - name: updater
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args:
+                - -config
+                - /etc/aliyun-nsg-updater/config.yaml
+              {{- with .Values.containerSecurityContext }}
+              securityContext: {{ toYaml . | nindent 16 }}
+              {{- end }}
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/aliyun-nsg-updater
+                  readOnly: true
+              {{- with .Values.resources }}
+              resources: {{ toYaml . | nindent 16 }}
+              {{- end }}
+{{- end }}

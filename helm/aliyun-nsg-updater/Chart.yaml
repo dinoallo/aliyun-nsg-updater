@@ -1,0 +1,13 @@
+apiVersion: v2
+name: aliyun-nsg-updater
+description: >
+  Periodically synchronise the current public IP to Alibaba Cloud security
+  group rules so that only the current outgoing IP has access.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - aliyun
+  - security-group
+  - public-ip
+  - network

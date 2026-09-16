@@ -1,0 +1,59 @@
+{{- if and .Values.job.enabled .Values.rules }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "aliyun-nsg-updater.fullname" . }}-init
+  labels:
+    {{- include "aliyun-nsg-updater.labels" . | nindent 4 }}
+    {{- with .Values.labels }}{{ toYaml . | nindent 4 }}{{ end }}
+  annotations:
+    {{- with .Values.annotations }}{{ toYaml . | nindent 4 }}{{ end }}
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "aliyun-nsg-updater.selectorLabels" . | nindent 8 }}
+      {{- with .Values.annotations }}
+      annotations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.podSecurityContext }}
+      securityContext: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ include "aliyun-nsg-updater.fullname" . }}-config
+            defaultMode: 0400
+      containers:
+        - name: updater
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - -config
+            - /etc/aliyun-nsg-updater/config.yaml
+          {{- with .Values.containerSecurityContext }}
+          securityContext: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/aliyun-nsg-updater
+              readOnly: true
+          {{- with .Values.resources }}
+          resources: {{ toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

@@ -1,0 +1,48 @@
+# =============================================================================
+# Aliyun NSG Updater - Configuration Example
+# =============================================================================
+# Copy this file to config.yaml and fill in your credentials and rules.
+# Run: go run . -config config.yaml
+# =============================================================================
+
+aliyun:
+  # Alibaba Cloud AccessKey (RAM user with ECS full access or security group
+  # management permissions).
+  access_key_id: "YOUR_ACCESS_KEY_ID"
+  access_key_secret: "YOUR_ACCESS_KEY_SECRET"
+  region_id: "cn-hangzhou"          # e.g. cn-hangzhou, cn-beijing, us-west-1
+
+# Each rule template describes one security group permission to keep
+# synchronized with the current public IP. The program will:
+#   1. Detect the current public IP.
+#   2. For each rule, only touch existing rules that match BOTH the
+#      (protocol, port, priority, nic_type, policy) AND the description.
+#      This prevents accidental modification of manually created rules.
+#   3. If a matching rule already has the current IP → skip.
+#   4. If a matching rule has a different IP → revoke it, then authorize
+#      the new one.
+#   5. If no matching rule exists → authorize a new one.
+#
+# NOTE: description is REQUIRED and used as a tag to identify rules
+# created by this tool. Do not reuse the same description for different
+# rules, and set a unique description per rule template.
+rules:
+  # Example: allow SSH (22) from your current public IP
+  - security_group_id: "sg-xxxxxxxxxxxxx"
+    direction: "ingress"       # ingress (inbound) or egress (outbound)
+    protocol: "tcp"            # tcp, udp, icmp, gre, all
+    port_range: "22/22"        # for icmp use "-1/-1"
+    priority: "1"              # 1-100, lower = higher priority
+    nic_type: "internet"       # internet or intranet
+    policy: "accept"           # accept or drop
+    description: "SSH access from home"
+
+  # Example: allow HTTPS (443) from your current public IP
+  - security_group_id: "sg-xxxxxxxxxxxxx"
+    direction: "ingress"
+    protocol: "tcp"
+    port_range: "443/443"
+    priority: "1"
+    nic_type: "internet"
+    policy: "accept"
+    description: "HTTPS access from home"
