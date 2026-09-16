@@ -14,6 +14,13 @@ type Config struct {
 }
 
 // AliyunConfig holds Alibaba Cloud API credentials and region.
+// These can also be provided via environment variables:
+//
+//	ALIYUN_ACCESS_KEY_ID
+//	ALIYUN_ACCESS_KEY_SECRET
+//	ALIYUN_REGION_ID
+//
+// Environment variables take precedence over the config file.
 type AliyunConfig struct {
 	AccessKeyID     string `yaml:"access_key_id"`
 	AccessKeySecret string `yaml:"access_key_secret"`
@@ -45,16 +52,32 @@ func (r *RuleTemplate) setDefaults() {
 	}
 }
 
+// resolveCredentials fills missing Aliyun fields from environment variables.
+// Env vars take precedence over config file values.
+func (a *AliyunConfig) resolveCredentials() {
+	if v := os.Getenv("ALIYUN_ACCESS_KEY_ID"); v != "" {
+		a.AccessKeyID = v
+	}
+	if v := os.Getenv("ALIYUN_ACCESS_KEY_SECRET"); v != "" {
+		a.AccessKeySecret = v
+	}
+	if v := os.Getenv("ALIYUN_REGION_ID"); v != "" {
+		a.RegionID = v
+	}
+}
+
 // Validate checks that the configuration is sane.
 func (c *Config) Validate() error {
+	c.Aliyun.resolveCredentials()
+
 	if c.Aliyun.AccessKeyID == "" {
-		return fmt.Errorf("aliyun.access_key_id is required")
+		return fmt.Errorf("aliyun.access_key_id is required (set in config file or ALIYUN_ACCESS_KEY_ID env var)")
 	}
 	if c.Aliyun.AccessKeySecret == "" {
-		return fmt.Errorf("aliyun.access_key_secret is required")
+		return fmt.Errorf("aliyun.access_key_secret is required (set in config file or ALIYUN_ACCESS_KEY_SECRET env var)")
 	}
 	if c.Aliyun.RegionID == "" {
-		return fmt.Errorf("aliyun.region_id is required")
+		return fmt.Errorf("aliyun.region_id is required (set in config file or ALIYUN_REGION_ID env var)")
 	}
 	for i := range c.Rules {
 		r := &c.Rules[i]

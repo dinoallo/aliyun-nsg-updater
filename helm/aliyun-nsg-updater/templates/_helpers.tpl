@@ -32,3 +32,15 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/name: {{ include "aliyun-nsg-updater.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+
+{{/*
+Resolve the credentials Secret name: use existingSecret if set, otherwise
+construct the name from the release.
+*/}}
+{{- define "aliyun-nsg-updater.credentialsSecret" -}}
+{{- if .Values.existingSecret -}}
+{{- .Values.existingSecret -}}
+{{- else -}}
+{{- include "aliyun-nsg-updater.fullname" . -}}-credentials
+{{- end -}}
+{{- end -}}
