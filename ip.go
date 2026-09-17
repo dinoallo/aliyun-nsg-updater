@@ -9,22 +9,13 @@ import (
 	"time"
 )
 
-// publicIPProviders lists URL endpoints that return the caller's public IP
-// as plain text. Providers are tried in order until one succeeds.
-var publicIPProviders = []string{
-	"https://api.ipify.org",
-	"https://checkip.amazonaws.com",
-	"https://ipinfo.io/ip",
-	"https://icanhazip.com",
-}
-
 // GetPublicIP detects the machine's public IPv4 address by querying
-// multiple external services. It returns the first successful result.
-func GetPublicIP() (string, error) {
+// the given provider URLs in order. It returns the first successful result.
+func GetPublicIP(providers []string) (string, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 
 	var firstErr error
-	for _, url := range publicIPProviders {
+	for _, url := range providers {
 		ip, err := queryPublicIP(client, url)
 		if err == nil {
 			return ip, nil
