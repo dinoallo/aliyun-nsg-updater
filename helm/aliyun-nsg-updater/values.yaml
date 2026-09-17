@@ -10,11 +10,22 @@ schedule: "*/30 * * * *"
 job:
   enabled: true
 
-# -- Alibaba Cloud credentials and region
+# -- Alibaba Cloud credentials.
+# If you prefer to manage the Secret yourself, set `existingSecret` to the
+# name of a pre-created Secret with keys: ALIYUN_ACCESS_KEY_ID,
+# ALIYUN_ACCESS_KEY_SECRET, ALIYUN_REGION_ID.
 aliyun:
+  # -- AccessKey ID (leave empty when using existingSecret)
   accessKeyId: ""
+  # -- AccessKey Secret (leave empty when using existingSecret)
   accessKeySecret: ""
+  # -- Region ID (leave empty when using existingSecret)
   regionId: "cn-hangzhou"
+
+# -- Name of an existing Secret containing ALIYUN_ACCESS_KEY_ID,
+# ALIYUN_ACCESS_KEY_SECRET and ALIYUN_REGION_ID keys.
+# When set, `aliyun.accessKeyId/accessKeySecret/regionId` are ignored.
+existingSecret: ""
 
 # -- Security group rule templates.  See config.yaml.example for the full
 # documentation of each field.  Every rule **must** have a non-empty
