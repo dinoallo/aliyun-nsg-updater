@@ -41,6 +41,6 @@ construct the name from the release.
 {{- if .Values.existingSecret -}}
 {{- .Values.existingSecret -}}
 {{- else -}}
-{{- include "aliyun-nsg-updater.fullname" . -}}-credentials
+{{- printf "%s-%s" (include "aliyun-nsg-updater.fullname" .) "credentials" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
