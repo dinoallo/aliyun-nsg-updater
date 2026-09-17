@@ -27,6 +27,16 @@ aliyun:
 # When set, `aliyun.accessKeyId/accessKeySecret/regionId` are ignored.
 existingSecret: ""
 
+# -- Custom public IP provider URLs. They are tried in order until one
+# succeeds. When the list is empty or omitted, the built-in defaults are
+# used:
+#   https://api.ipify.org
+#   https://checkip.amazonaws.com
+#   https://ipinfo.io/ip
+#   https://icanhazip.com
+publicIpProviders: []
+  # - https://my-custom-provider.example.com/ip
+
 # -- Security group rule templates.  See config.yaml.example for the full
 # documentation of each field.  Every rule **must** have a non-empty
 # description which is used as a tag to identify managed rules.

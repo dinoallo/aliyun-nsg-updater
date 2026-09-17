@@ -21,7 +21,7 @@ func main() {
 	}
 
 	// Detect public IP.
-	publicIP, err := GetPublicIP()
+	publicIP, err := GetPublicIP(cfg.PublicIPProviders)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error detecting public IP: %v\n", err)
 		os.Exit(1)

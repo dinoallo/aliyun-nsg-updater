@@ -9,8 +9,9 @@ import (
 
 // Config represents the top-level configuration.
 type Config struct {
-	Aliyun AliyunConfig   `yaml:"aliyun"`
-	Rules  []RuleTemplate `yaml:"rules"`
+	Aliyun            AliyunConfig   `yaml:"aliyun"`
+	Rules             []RuleTemplate `yaml:"rules"`
+	PublicIPProviders []string       `yaml:"public_ip_providers"`
 }
 
 // AliyunConfig holds Alibaba Cloud API credentials and region.
@@ -37,6 +38,15 @@ type RuleTemplate struct {
 	NicType         string `yaml:"nic_type"`    // internet or intranet, default internet
 	Policy          string `yaml:"policy"`      // accept or drop, default accept
 	Description     string `yaml:"description"`
+}
+
+// defaultPublicIPProviders is the fallback list when the user does not
+// configure any public IP provider URLs.
+var defaultPublicIPProviders = []string{
+	"https://api.ipify.org",
+	"https://checkip.amazonaws.com",
+	"https://ipinfo.io/ip",
+	"https://icanhazip.com",
 }
 
 // setDefaults applies default values for optional fields.
@@ -66,9 +76,18 @@ func (a *AliyunConfig) resolveCredentials() {
 	}
 }
 
+// resolveProviders falls back to the built-in default list when the user
+// has not specified any providers in the config.
+func (c *Config) resolveProviders() {
+	if len(c.PublicIPProviders) == 0 {
+		c.PublicIPProviders = defaultPublicIPProviders
+	}
+}
+
 // Validate checks that the configuration is sane.
 func (c *Config) Validate() error {
 	c.Aliyun.resolveCredentials()
+	c.resolveProviders()
 
 	if c.Aliyun.AccessKeyID == "" {
 		return fmt.Errorf("aliyun.access_key_id is required (set in config file or ALIYUN_ACCESS_KEY_ID env var)")
@@ -78,6 +97,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Aliyun.RegionID == "" {
 		return fmt.Errorf("aliyun.region_id is required (set in config file or ALIYUN_REGION_ID env var)")
+	}
+	if len(c.PublicIPProviders) == 0 {
+		return fmt.Errorf("public_ip_providers must have at least one URL")
 	}
 	for i := range c.Rules {
 		r := &c.Rules[i]

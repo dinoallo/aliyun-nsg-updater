@@ -12,6 +12,26 @@ aliyun:
   access_key_secret: "YOUR_ACCESS_KEY_SECRET"
   region_id: "cn-hangzhou"          # e.g. cn-hangzhou, cn-beijing, us-west-1
 
+# ---------------------------------------------------------------------------
+# Public IP providers
+# ---------------------------------------------------------------------------
+# List of URL endpoints that return the caller's public IP as plain text.
+# They are tried in order until one succeeds. When this list is empty or
+# omitted, the following built-in defaults are used:
+#
+#   - https://api.ipify.org
+#   - https://checkip.amazonaws.com
+#   - https://ipinfo.io/ip
+#   - https://icanhazip.com
+#
+# Uncomment and customize to use your own endpoints:
+# public_ip_providers:
+#   - "https://api.ipify.org"
+#   - "https://checkip.amazonaws.com"
+
+# ---------------------------------------------------------------------------
+# Rule templates
+# ---------------------------------------------------------------------------
 # Each rule template describes one security group permission to keep
 # synchronized with the current public IP. The program will:
 #   1. Detect the current public IP.
