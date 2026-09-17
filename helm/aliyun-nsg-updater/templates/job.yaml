@@ -43,6 +43,9 @@ spec:
         - name: updater
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ include "aliyun-nsg-updater.credentialsSecret" . }}
           args:
             - -config
             - /etc/aliyun-nsg-updater/config.yaml
